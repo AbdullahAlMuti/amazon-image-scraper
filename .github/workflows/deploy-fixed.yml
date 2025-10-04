@@ -1,0 +1,99 @@
+name: Deploy Amazon Image Scraper
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: paste-and-pixl/package-lock.json
+
+      - name: Debug - List repository contents
+        run: |
+          echo "=== Repository Structure ==="
+          ls -la
+          echo "=== paste-and-pixl directory ==="
+          ls -la paste-and-pixl/
+          echo "=== Check if package.json exists ==="
+          if [ -f "paste-and-pixl/package.json" ]; then
+            echo "✅ package.json found"
+            cat paste-and-pixl/package.json | head -10
+          else
+            echo "❌ package.json not found"
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: |
+          cd paste-and-pixl
+          echo "Installing dependencies..."
+          npm ci --prefer-offline --no-audit
+        env:
+          NODE_ENV: production
+
+      - name: Build application
+        run: |
+          cd paste-and-pixl
+          echo "Building application..."
+          npm run build
+        env:
+          NODE_ENV: production
+          VITE_SUPABASE_URL: https://vkmvppllfwldzyzqnveo.supabase.co
+          VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZrbXZwcGxsZndsZHp5enFudmVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1ODkzNDQsImV4cCI6MjA3NTE2NTM0NH0.hiqB2w5lQ205QVvuok4hAJ566ocQ20asBLZcYkDkmh0
+
+      - name: Verify build output
+        run: |
+          echo "=== Build verification ==="
+          if [ -d "paste-and-pixl/dist" ]; then
+            echo "✅ dist directory created"
+            ls -la paste-and-pixl/dist/
+            echo "=== Checking for index.html ==="
+            if [ -f "paste-and-pixl/dist/index.html" ]; then
+              echo "✅ index.html found"
+            else
+              echo "❌ index.html not found"
+              exit 1
+            fi
+          else
+            echo "❌ dist directory not found"
+            exit 1
+          fi
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: paste-and-pixl/dist
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
