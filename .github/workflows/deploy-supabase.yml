@@ -1,0 +1,25 @@
+name: Deploy Supabase Functions
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'paste-and-pixl/supabase/functions/**'
+  workflow_dispatch:
+
+jobs:
+  deploy-functions:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: paste-and-pixl
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+      - name: Deploy scrape-amazon
+        run: supabase functions deploy scrape-amazon --project-ref $SUPABASE_PROJECT_REF
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+
+
