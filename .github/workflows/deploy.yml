@@ -21,6 +21,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: List directory structure
+        run: |
+          echo "Current directory structure:"
+          ls -la
+          echo "Checking for paste-and-pixl directory:"
+          if [ -d "paste-and-pixl" ]; then
+            echo "paste-and-pixl directory found"
+            ls -la paste-and-pixl/
+          else
+            echo "paste-and-pixl directory not found"
+            echo "Available directories:"
+            find . -type d -maxdepth 2
+          fi
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -30,16 +44,40 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd paste-and-pixl
-          npm ci
+          if [ -d "paste-and-pixl" ]; then
+            cd paste-and-pixl
+            npm ci
+          else
+            echo "paste-and-pixl directory not found, trying to install from root"
+            npm ci
+          fi
 
       - name: Build
         run: |
-          cd paste-and-pixl
-          npm run build
+          if [ -d "paste-and-pixl" ]; then
+            cd paste-and-pixl
+            npm run build
+          else
+            echo "paste-and-pixl directory not found, trying to build from root"
+            npm run build
+          fi
         env:
           VITE_SUPABASE_URL: https://vkmvppllfwldzyzqnveo.supabase.co
           VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZrbXZwcGxsZndsZHp5enFudmVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk1ODkzNDQsImV4cCI6MjA3NTE2NTM0NH0.hiqB2w5lQ205QVvuok4hAJ566ocQ20asBLZcYkDkmh0
+
+      - name: Check build output
+        run: |
+          echo "Checking for dist directory:"
+          if [ -d "paste-and-pixl/dist" ]; then
+            echo "paste-and-pixl/dist found"
+            ls -la paste-and-pixl/dist/
+          elif [ -d "dist" ]; then
+            echo "dist directory found in root"
+            ls -la dist/
+          else
+            echo "No dist directory found"
+            find . -name "dist" -type d
+          fi
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
